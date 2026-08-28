@@ -1,0 +1,6 @@
+{
+  "name": "GST Calculator",
+  "description": "Fast and easy GST tax calculator for small businesses with quick rate toggles, intra/inter-state tax breakdown, multi-item invoice builder, and history.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
