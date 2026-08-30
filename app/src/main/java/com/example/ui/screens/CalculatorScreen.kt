@@ -26,6 +26,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -38,10 +40,12 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -259,6 +263,103 @@ fun CalculatorScreen(
             onAddCustomRateClick = { viewModel.showCustomRateDialog(true) }
         )
 
+        // Party Details Section (Party Name & GST Number)
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .testTag("party_details_card"),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+            ),
+            border = androidx.compose.foundation.BorderStroke(
+                1.dp,
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Business,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "PARTY DETAILS (NAME & GSTIN)",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+
+                    val detectedState = remember(calcState.partyGstin) {
+                        GstCalculatorEngine.getStateFromGstin(calcState.partyGstin)
+                    }
+
+                    if (detectedState != null) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)
+                        ) {
+                            Text(
+                                text = "📍 $detectedState (${calcState.partyGstin.take(2)})",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = calcState.partyName,
+                        onValueChange = { viewModel.setPartyName(it) },
+                        label = { Text("Party Name / Client") },
+                        placeholder = { Text("e.g. Acme Corp") },
+                        leadingIcon = {
+                            Icon(Icons.Default.Badge, contentDescription = null, modifier = Modifier.size(16.dp))
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .weight(1.1f)
+                            .testTag("party_name_input")
+                    )
+
+                    OutlinedTextField(
+                        value = calcState.partyGstin,
+                        onValueChange = { viewModel.setPartyGstin(it) },
+                        label = { Text("GST Number (GSTIN)") },
+                        placeholder = { Text("e.g. 27AAPCA1234F1Z5") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .weight(1.1f)
+                            .testTag("party_gstin_input")
+                    )
+                }
+            }
+        }
+
         // Expandable Quantity & Discount Toggle
         Row(
             modifier = Modifier
@@ -453,9 +554,11 @@ fun CalculatorScreen(
     if (calcState.isSaveDialogOpen) {
         SaveCalculationDialog(
             initialNote = calcState.note,
+            initialPartyName = calcState.partyName,
+            initialPartyGstin = calcState.partyGstin,
             onDismiss = { viewModel.showSaveDialog(false) },
-            onConfirm = { note ->
-                viewModel.saveCurrentCalculation(note)
+            onConfirm = { note, partyName, partyGstin ->
+                viewModel.saveCurrentCalculation(note, partyName, partyGstin)
             }
         )
     }

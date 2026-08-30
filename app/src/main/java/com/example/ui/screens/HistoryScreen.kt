@@ -77,6 +77,8 @@ fun HistoryScreen(
         val matchesSearch = if (searchQuery.isBlank()) true else {
             item.title.contains(searchQuery, ignoreCase = true) ||
                     item.notes.contains(searchQuery, ignoreCase = true) ||
+                    item.partyName.contains(searchQuery, ignoreCase = true) ||
+                    item.partyGstin.contains(searchQuery, ignoreCase = true) ||
                     item.itemsSummary.contains(searchQuery, ignoreCase = true) ||
                     item.totalAmount.toString().contains(searchQuery)
         }
@@ -323,6 +325,45 @@ private fun HistoryItemCard(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
+
+            if (item.partyName.isNotBlank() || item.partyGstin.isNotBlank()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    if (item.partyName.isNotBlank()) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant
+                        ) {
+                            Text(
+                                text = "🏢 ${item.partyName}",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                    if (item.partyGstin.isNotBlank()) {
+                        val state = GstCalculatorEngine.getStateFromGstin(item.partyGstin)
+                        val suffix = if (state != null) " ($state)" else ""
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant
+                        ) {
+                            Text(
+                                text = "🆔 ${item.partyGstin}$suffix",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+            }
 
             if (item.itemsSummary.isNotBlank()) {
                 Text(

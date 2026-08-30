@@ -62,4 +62,39 @@ class ExampleUnitTest {
     assertEquals(54.0, breakdown.sgstAmount, 0.01)
     assertEquals(1008.0, breakdown.grossAmount, 0.01)
   }
+
+  @Test
+  fun testGstin_stateLookupAndValidation() {
+    val stateMaharashtra = GstCalculatorEngine.getStateFromGstin("27AAPCA1234F1Z5")
+    assertEquals("Maharashtra", stateMaharashtra)
+
+    val stateDelhi = GstCalculatorEngine.getStateFromGstin("07AAAAA0000A1Z5")
+    assertEquals("Delhi", stateDelhi)
+
+    val stateKarnataka = GstCalculatorEngine.getStateFromGstin("29BBBBB1111B1Z2")
+    assertEquals("Karnataka", stateKarnataka)
+
+    assertEquals(true, GstCalculatorEngine.isValidGstinFormat("27AAPCA1234F1Z5"))
+    assertEquals(false, GstCalculatorEngine.isValidGstinFormat("INVALID_GSTIN"))
+  }
+
+  @Test
+  fun testGstCalculation_withPartyDetails() {
+    val breakdown = GstCalculatorEngine.calculate(
+      inputAmount = 1000.0,
+      rate = 18.0,
+      mode = CalculationMode.EXCLUSIVE,
+      taxType = TaxType.INTRA_STATE,
+      partyName = "Apex Solutions",
+      partyGstin = "27AAPCA1234F1Z5"
+    )
+
+    assertEquals("Apex Solutions", breakdown.partyName)
+    assertEquals("27AAPCA1234F1Z5", breakdown.partyGstin)
+
+    val shareText = GstCalculatorEngine.generateShareableText(breakdown)
+    assert(shareText.contains("Apex Solutions"))
+    assert(shareText.contains("27AAPCA1234F1Z5"))
+    assert(shareText.contains("Maharashtra"))
+  }
 }

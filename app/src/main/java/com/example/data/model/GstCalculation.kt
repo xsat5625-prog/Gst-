@@ -33,7 +33,9 @@ data class GstBreakdown(
     val igstAmount: Double = 0.0,
     val grossAmount: Double = 0.0,
     val mode: CalculationMode = CalculationMode.EXCLUSIVE,
-    val taxType: TaxType = TaxType.INTRA_STATE
+    val taxType: TaxType = TaxType.INTRA_STATE,
+    val partyName: String = "",
+    val partyGstin: String = ""
 )
 
 data class InvoiceItem(

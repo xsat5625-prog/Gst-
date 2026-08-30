@@ -18,13 +18,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.BookmarkAdd
+import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -94,7 +97,7 @@ fun MultiItemInvoiceScreen(
         ) {
             item {
                 Spacer(modifier = Modifier.height(6.dp))
-                // Invoice Header Card
+                // Party & Invoice Details Card
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -119,13 +122,22 @@ fun MultiItemInvoiceScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = "QUICK BILL / MULTI-ITEM INVOICE",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                letterSpacing = 0.8.sp
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Business,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "PARTY & INVOICE DETAILS",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    letterSpacing = 0.8.sp
+                                )
+                            }
 
                             // Intra vs Inter state toggle
                             Surface(
@@ -153,12 +165,13 @@ fun MultiItemInvoiceScreen(
                             OutlinedTextField(
                                 value = invoiceState.customerName,
                                 onValueChange = { viewModel.setCustomerName(it) },
-                                label = { Text("Customer Name / Business") },
-                                placeholder = { Text("e.g. Ramesh Kumar") },
+                                label = { Text("Party / Client Name") },
+                                placeholder = { Text("e.g. Ramesh Kumar / Acme Inc") },
                                 leadingIcon = {
                                     Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(18.dp))
                                 },
                                 singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier
                                     .weight(1.3f)
                                     .testTag("invoice_customer_input")
@@ -168,12 +181,50 @@ fun MultiItemInvoiceScreen(
                                 value = invoiceState.invoiceNumber,
                                 onValueChange = { viewModel.setInvoiceNumber(it) },
                                 label = { Text("Invoice No.") },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Tag, contentDescription = null, modifier = Modifier.size(18.dp))
+                                },
                                 singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier
                                     .weight(0.9f)
                                     .testTag("invoice_number_input")
                             )
                         }
+
+                        // Party GST Number (GSTIN) Row
+                        OutlinedTextField(
+                            value = invoiceState.partyGstin,
+                            onValueChange = { viewModel.setInvoicePartyGstin(it) },
+                            label = { Text("Party GST Number (GSTIN)") },
+                            placeholder = { Text("e.g. 27AAPCA1234F1Z5") },
+                            leadingIcon = {
+                                Icon(Icons.Default.Badge, contentDescription = null, modifier = Modifier.size(18.dp))
+                            },
+                            trailingIcon = {
+                                val detectedState = GstCalculatorEngine.getStateFromGstin(invoiceState.partyGstin)
+                                if (detectedState != null) {
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        modifier = Modifier.padding(end = 6.dp)
+                                    ) {
+                                        Text(
+                                            text = "$detectedState (${invoiceState.partyGstin.take(2)})",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("invoice_party_gstin_input")
+                        )
                     }
                 }
             }

@@ -36,6 +36,9 @@ data class CalculatorUiState(
     val quantity: Double = 1.0,
     val discountPercent: Double = 0.0,
     val note: String = "",
+    val partyName: String = "",
+    val partyGstin: String = "",
+    val showPartySection: Boolean = true,
     val showQuantityDiscountRow: Boolean = false,
     val isCustomRateDialogOpen: Boolean = false,
     val isSaveDialogOpen: Boolean = false
@@ -44,6 +47,7 @@ data class CalculatorUiState(
 data class InvoiceUiState(
     val items: List<InvoiceItem> = emptyList(),
     val customerName: String = "",
+    val partyGstin: String = "",
     val invoiceNumber: String = "INV-001",
     val taxType: TaxType = TaxType.INTRA_STATE
 )
@@ -102,7 +106,9 @@ class GstViewModel(application: Application) : AndroidViewModel(application) {
             mode = state.mode,
             taxType = state.taxType,
             quantity = state.quantity,
-            discountPercent = state.discountPercent
+            discountPercent = state.discountPercent,
+            partyName = state.partyName,
+            partyGstin = state.partyGstin
         )
     }.stateIn(
         scope = viewModelScope,
@@ -214,6 +220,21 @@ class GstViewModel(application: Application) : AndroidViewModel(application) {
         _calcState.update { it.copy(isSaveDialogOpen = show) }
     }
 
+    fun setPartyName(name: String) {
+        _calcState.update { it.copy(partyName = name) }
+    }
+
+    fun setPartyGstin(gstin: String) {
+        _calcState.update { current ->
+            val formatted = gstin.uppercase(java.util.Locale.getDefault()).take(15)
+            current.copy(partyGstin = formatted)
+        }
+    }
+
+    fun togglePartySection() {
+        _calcState.update { it.copy(showPartySection = !it.showPartySection) }
+    }
+
     fun setNote(note: String) {
         _calcState.update { it.copy(note = note) }
     }
@@ -234,12 +255,22 @@ class GstViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun saveCurrentCalculation(note: String = "") {
+    fun saveCurrentCalculation(note: String = "", partyName: String = "", partyGstin: String = "") {
         viewModelScope.launch {
             val breakdown = currentBreakdown.value
-            val title = if (note.isNotBlank()) note else "GST @ ${GstCalculatorEngine.formatNumber(breakdown.gstRate)}%"
+            val effectivePartyName = if (partyName.isNotBlank()) partyName else _calcState.value.partyName
+            val effectivePartyGstin = if (partyGstin.isNotBlank()) partyGstin else _calcState.value.partyGstin
+            
+            val defaultTitle = if (effectivePartyName.isNotBlank()) {
+                "Calc for $effectivePartyName (${GstCalculatorEngine.formatNumber(breakdown.gstRate)}%)"
+            } else if (note.isNotBlank()) {
+                note
+            } else {
+                "GST @ ${GstCalculatorEngine.formatNumber(breakdown.gstRate)}%"
+            }
+
             val entity = HistoryEntity(
-                title = title,
+                title = defaultTitle,
                 calculationType = "SINGLE_CALC",
                 baseAmount = breakdown.netAmount,
                 gstRate = breakdown.gstRate,
@@ -252,7 +283,9 @@ class GstViewModel(application: Application) : AndroidViewModel(application) {
                 isInterState = breakdown.taxType == TaxType.INTER_STATE,
                 quantity = breakdown.quantity,
                 discountPercent = breakdown.discountPercent,
-                notes = note
+                notes = note,
+                partyName = effectivePartyName,
+                partyGstin = effectivePartyGstin
             )
             repository.saveHistory(entity)
             showSaveDialog(false)
@@ -269,7 +302,10 @@ class GstViewModel(application: Application) : AndroidViewModel(application) {
                 taxType = if (history.isInterState) TaxType.INTER_STATE else TaxType.INTRA_STATE,
                 quantity = history.quantity,
                 discountPercent = history.discountPercent,
-                note = history.notes
+                note = history.notes,
+                partyName = history.partyName,
+                partyGstin = history.partyGstin,
+                showPartySection = history.partyName.isNotBlank() || history.partyGstin.isNotBlank()
             )
         }
         Toast.makeText(getApplication(), "Loaded ${history.title}", Toast.LENGTH_SHORT).show()
@@ -297,10 +333,11 @@ class GstViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun shareCalculation(breakdown: GstBreakdown, title: String = "GST Calculation") {
-        val text = GstCalculatorEngine.generateShareableText(breakdown, title)
+        val customTitle = if (breakdown.partyName.isNotBlank()) "GST Quote for ${breakdown.partyName}" else title
+        val text = GstCalculatorEngine.generateShareableText(breakdown, customTitle)
         val sendIntent = Intent(Intent.ACTION_SEND).apply {
             this.type = "text/plain"
-            putExtra(Intent.EXTRA_SUBJECT, title)
+            putExtra(Intent.EXTRA_SUBJECT, customTitle)
             putExtra(Intent.EXTRA_TEXT, text)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
@@ -385,6 +422,13 @@ class GstViewModel(application: Application) : AndroidViewModel(application) {
         _invoiceState.update { it.copy(customerName = name) }
     }
 
+    fun setInvoicePartyGstin(gstin: String) {
+        _invoiceState.update { current ->
+            val formatted = gstin.uppercase(java.util.Locale.getDefault()).take(15)
+            current.copy(partyGstin = formatted)
+        }
+    }
+
     fun setInvoiceNumber(number: String) {
         _invoiceState.update { it.copy(invoiceNumber = number) }
     }
@@ -416,7 +460,9 @@ class GstViewModel(application: Application) : AndroidViewModel(application) {
                 isInclusive = false,
                 isInterState = state.taxType == TaxType.INTER_STATE,
                 notes = "Invoice #${state.invoiceNumber}",
-                itemsSummary = summary
+                itemsSummary = summary,
+                partyName = state.customerName,
+                partyGstin = state.partyGstin
             )
             repository.saveHistory(entity)
             Toast.makeText(getApplication(), "Invoice saved to History", Toast.LENGTH_SHORT).show()
@@ -435,7 +481,12 @@ class GstViewModel(application: Application) : AndroidViewModel(application) {
         sb.appendLine("🧾 INVOICE / BILL SUMMARY")
         sb.appendLine("━━━━━━━━━━━━━━━━━━━━━━━━━")
         if (state.invoiceNumber.isNotBlank()) sb.appendLine("Invoice No: ${state.invoiceNumber}")
-        if (state.customerName.isNotBlank()) sb.appendLine("Customer: ${state.customerName}")
+        if (state.customerName.isNotBlank()) sb.appendLine("Party / Customer: ${state.customerName}")
+        if (state.partyGstin.isNotBlank()) {
+            val stateName = GstCalculatorEngine.getStateFromGstin(state.partyGstin)
+            val stateSuffix = if (stateName != null) " ($stateName)" else ""
+            sb.appendLine("Party GSTIN: ${state.partyGstin}$stateSuffix")
+        }
         sb.appendLine("Tax Mode: ${state.taxType.title}")
         sb.appendLine("━━━━━━━━━━━━━━━━━━━━━━━━━")
         sb.appendLine("ITEMS:")

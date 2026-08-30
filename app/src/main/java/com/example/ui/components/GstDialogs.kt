@@ -128,10 +128,14 @@ fun AddCustomRateDialog(
 @Composable
 fun SaveCalculationDialog(
     initialNote: String,
+    initialPartyName: String = "",
+    initialPartyGstin: String = "",
     onDismiss: () -> Unit,
-    onConfirm: (note: String) -> Unit
+    onConfirm: (note: String, partyName: String, partyGstin: String) -> Unit
 ) {
     var note by remember { mutableStateOf(initialNote) }
+    var partyName by remember { mutableStateOf(initialPartyName) }
+    var partyGstin by remember { mutableStateOf(initialPartyGstin) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -145,20 +149,45 @@ fun SaveCalculationDialog(
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    text = "Add an optional client name, item description, or invoice reference to remember this calculation.",
+                    text = "Save this calculation with party info or note for quick reference later.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+
+                OutlinedTextField(
+                    value = partyName,
+                    onValueChange = { partyName = it },
+                    label = { Text("Party Name / Client (Optional)") },
+                    placeholder = { Text("e.g. Apex Enterprises") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("save_party_name_input")
+                )
+
+                OutlinedTextField(
+                    value = partyGstin,
+                    onValueChange = { partyGstin = it.uppercase(java.util.Locale.getDefault()).take(15) },
+                    label = { Text("Party GSTIN / GST No. (Optional)") },
+                    placeholder = { Text("e.g. 27AAPCA1234F1Z5") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("save_party_gstin_input")
+                )
+
                 OutlinedTextField(
                     value = note,
                     onValueChange = { note = it },
-                    label = { Text("Note / Client / Item Name") },
-                    placeholder = { Text("e.g. AC Repair for Sharma & Co.") },
+                    label = { Text("Note / Description") },
+                    placeholder = { Text("e.g. AC Repair quote") },
                     singleLine = true,
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("save_note_input")
@@ -167,7 +196,7 @@ fun SaveCalculationDialog(
         },
         confirmButton = {
             Button(
-                onClick = { onConfirm(note) },
+                onClick = { onConfirm(note, partyName, partyGstin) },
                 shape = RoundedCornerShape(10.dp),
                 modifier = Modifier.testTag("confirm_save_button")
             ) {

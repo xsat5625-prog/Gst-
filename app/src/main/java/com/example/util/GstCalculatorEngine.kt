@@ -27,6 +27,61 @@ object GstCalculatorEngine {
 
     private val compactFormatter: DecimalFormat = DecimalFormat("#,##,##0.##")
 
+    val GST_STATE_CODES = mapOf(
+        "01" to "Jammu & Kashmir",
+        "02" to "Himachal Pradesh",
+        "03" to "Punjab",
+        "04" to "Chandigarh",
+        "05" to "Uttarakhand",
+        "06" to "Haryana",
+        "07" to "Delhi",
+        "08" to "Rajasthan",
+        "09" to "Uttar Pradesh",
+        "10" to "Bihar",
+        "11" to "Sikkim",
+        "12" to "Arunachal Pradesh",
+        "13" to "Nagaland",
+        "14" to "Manipur",
+        "15" to "Mizoram",
+        "16" to "Tripura",
+        "17" to "Meghalaya",
+        "18" to "Assam",
+        "19" to "West Bengal",
+        "20" to "Jharkhand",
+        "21" to "Odisha",
+        "22" to "Chhattisgarh",
+        "23" to "Madhya Pradesh",
+        "24" to "Gujarat",
+        "26" to "Dadra and Nagar Haveli and Daman and Diu",
+        "27" to "Maharashtra",
+        "29" to "Karnataka",
+        "30" to "Goa",
+        "31" to "Lakshadweep",
+        "32" to "Kerala",
+        "33" to "Tamil Nadu",
+        "34" to "Puducherry",
+        "35" to "Andaman & Nicobar Islands",
+        "36" to "Telangana",
+        "37" to "Andhra Pradesh",
+        "38" to "Ladakh"
+    )
+
+    fun getStateFromGstin(gstin: String): String? {
+        val cleanGstin = gstin.trim()
+        if (cleanGstin.length >= 2) {
+            val code = cleanGstin.substring(0, 2)
+            return GST_STATE_CODES[code]
+        }
+        return null
+    }
+
+    fun isValidGstinFormat(gstin: String): Boolean {
+        val cleanGstin = gstin.trim().uppercase(Locale.getDefault())
+        // 15-character GSTIN regex: 2 digits + 5 alpha + 4 digits + 1 alpha + 1 char (1-9/A-Z) + 'Z' + 1 char
+        val gstinRegex = Regex("^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$")
+        return cleanGstin.matches(gstinRegex)
+    }
+
     fun formatCurrency(amount: Double): String {
         if (amount.isNaN() || amount.isInfinite()) return "₹0.00"
         return currencyFormatter.format(amount)
@@ -47,7 +102,9 @@ object GstCalculatorEngine {
         mode: CalculationMode,
         taxType: TaxType,
         quantity: Double = 1.0,
-        discountPercent: Double = 0.0
+        discountPercent: Double = 0.0,
+        partyName: String = "",
+        partyGstin: String = ""
     ): GstBreakdown {
         val qty = if (quantity <= 0.0) 1.0 else quantity
         val discPercent = discountPercent.coerceIn(0.0, 100.0)
@@ -100,7 +157,9 @@ object GstCalculatorEngine {
             igstAmount = igstAmount,
             grossAmount = grossAmount,
             mode = mode,
-            taxType = taxType
+            taxType = taxType,
+            partyName = partyName.trim(),
+            partyGstin = partyGstin.trim().uppercase(Locale.getDefault())
         )
     }
 
@@ -108,6 +167,17 @@ object GstCalculatorEngine {
         val sb = StringBuilder()
         sb.appendLine("🧾 $title")
         sb.appendLine("━━━━━━━━━━━━━━━━━━━")
+        if (breakdown.partyName.isNotBlank()) {
+            sb.appendLine("🏢 Party: ${breakdown.partyName}")
+        }
+        if (breakdown.partyGstin.isNotBlank()) {
+            val stateName = getStateFromGstin(breakdown.partyGstin)
+            val stateSuffix = if (stateName != null) " ($stateName)" else ""
+            sb.appendLine("🆔 GSTIN: ${breakdown.partyGstin}$stateSuffix")
+        }
+        if (breakdown.partyName.isNotBlank() || breakdown.partyGstin.isNotBlank()) {
+            sb.appendLine("───────────────────")
+        }
         sb.appendLine("Type: ${if (breakdown.mode == CalculationMode.EXCLUSIVE) "GST Added (Exclusive)" else "GST Extracted (Inclusive)"}")
         sb.appendLine("Tax Mode: ${breakdown.taxType.title}")
         if (breakdown.quantity > 1.0) {

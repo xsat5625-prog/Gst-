@@ -22,5 +22,7 @@ data class HistoryEntity(
     val quantity: Double = 1.0,
     val discountPercent: Double = 0.0,
     val notes: String = "",
-    val itemsSummary: String = ""
+    val itemsSummary: String = "",
+    val partyName: String = "",
+    val partyGstin: String = ""
 )
